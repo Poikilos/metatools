@@ -20,6 +20,7 @@ local nodelock = {}
 
 local modpath = minetest.get_modpath("metatools")
 dofile(modpath .. "/assertions.lua")
+dofile(modpath .. "/chatcommands.lua")
 
 minetest.register_craftitem("metatools:stick",{
 	description = "Meta stick",
@@ -162,7 +163,7 @@ function meta_exec(struct)
 		for category, req in pairs(struct.required) do
 			if category == "position" and not assert_pos(req) then
 				return false, ("- %s - Failure : Invalid position : %s"):format(struct.scope, dump_normalize(req))
-			
+
 			elseif category == "contextid" and not assert_contextid(req) then
 				return false, ("- %s - Failutre : Invalid contextid : %s"):format(struct.scope, dump_normalize(req))
 
@@ -215,7 +216,7 @@ function meta_exec(struct)
 				if not assert_contextid(req.contextid) then
 					return false, ("- %s - Failure : Invalid context id : %s"):format(struct.scope, dump_normalize(req.contextid))
 				end
-				
+
 				if not metatools.contexts[req.contextid].mode == req.mode then
 					return false, ("- %s - Failure : Invalid mode, %s is required"):format(struct.scope, dump_normalize(req.mode))
 				end
@@ -350,7 +351,7 @@ function metatools.purge(contextid)
 		local inv = meta:get_inventory()
 		inv:set_lists({})
 		return true, "inventory purged"
-	
+
 	else
 		meta:from_table(nil)
 		return true, "fields purged"
@@ -543,7 +544,7 @@ minetest.register_chatcommand("meta", {
 					format(summ.id, summ.mode, minetest.pos_to_string(summ.pos), summ.owner)
 			end
 			return true, retstr .. ("- meta::contexts - %d contexts"):format(#ctxs)
-		
+
 		-- meta open (x,y,z) [fields|inventory]
 		elseif params[1] == "open" then
 
@@ -702,7 +703,7 @@ minetest.register_chatcommand("meta", {
 					}
 				}
 			})
-			
+
 		-- meta purge
 		elseif params[1] == "purge" then
 			return meta_exec({
@@ -782,7 +783,7 @@ minetest.register_chatcommand("meta", {
 						}
 					}
 				})
-			
+
 			else
 				return false, "- meta::list - Unknown subcommand '" .. params[2] .. "', please consult '/meta help' for help"
 			end
@@ -822,7 +823,7 @@ minetest.register_chatcommand("meta", {
 						}
 					}
 				})
-			
+
 			-- meta itemstack add <itemstack>
 			elseif params[2] == "add" then
 				return meta_exec({
