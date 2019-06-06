@@ -12,6 +12,16 @@
 --
 ]]--
 
+local function get_nodedef_field(nodename, fieldname)
+	if not minetest.registered_nodes[nodename] then
+		-- print("metatools.get_nodedef_field: no registered node named " .. nodename)
+		return nil
+	end
+	-- print("metatools.get_nodedef_field: checking " .. nodename .. " for " .. fieldname .. " in " .. dump(minetest.registered_nodes[nodename]))
+	-- print("* result:" .. dump(minetest.registered_nodes[nodename][fieldname]))
+	return minetest.registered_nodes[nodename][fieldname]
+end
+
 metatools = {} -- Public namespace
 metatools.contexts = {}
 metatools.playerlocks = {} -- Selection locks of the players
@@ -27,6 +37,7 @@ minetest.register_craftitem("metatools:stick",{
 	inventory_image = "metatools_stick.png",
 	on_use = function(itemstack, user, pointed_thing)
 		local username = user:get_player_name()
+		local userpos = user:get_pos()
 		local nodepos  = pointed_thing.under
 		if not nodepos or not minetest.get_node(nodepos) then return end
 		local nodename = minetest.get_node(nodepos).name
@@ -34,9 +45,161 @@ minetest.register_craftitem("metatools:stick",{
 		local meta	   = minetest.get_meta(nodepos)
 		local metalist = meta:to_table()
 
-		minetest.chat_send_player(username, "- meta::stick - Node located at "..minetest.pos_to_string(nodepos))
-		minetest.chat_send_player(username, "- meta::stick - Metadata fields dump : " .. dump(meta:to_table()["fields"]):gsub('\n', ""))
-		minetest.log("action","[metatools] Player "..username.." saw metadatas of node at "..minetest.pos_to_string(nodepos))
+		minetest.chat_send_player(
+			username,
+			"[metatools::stick] You pointed at the '" .. nodename .. "':"
+		)
+		minetest.chat_send_player(
+			username,
+			"[metatools::stick]   pos:"
+			.. minetest.pos_to_string(nodepos)
+		)
+		-- minetest.chat_send_player(
+		-- 	username,
+		-- 	"[metatools::stick]   drawtype:"
+		-- 	.. get_nodedef_field(nodename, "drawtype")
+		-- )
+		-- minetest.chat_send_player(
+		-- 	username,
+		-- 	"[metatools::stick]   sunlight_propagates:"
+		-- 	.. (get_nodedef_field(nodename, "sunlight_propagates") and 'true' or 'false')
+		-- )
+
+
+		minetest.chat_send_player(
+			username,
+			"[metatools::stick]   metadata: "
+			.. dump(meta:to_table()["fields"]):gsub('\n', "")
+		)
+		local airname = minetest.get_name_from_content_id(minetest.CONTENT_AIR)
+		-- local litnode = nil
+		local litpos = nil
+		local litdist = nil
+		local litwhy = "unknown"
+		local litmsg = ""
+		local litid = nil
+		local litwhat = nil
+		local litindent = ""
+		local foundPointed = false
+		local offsets = {
+			[0] = {["x"] = 0, ["y"] = 0, ["z"] = 0},
+			[1] = {["x"] = 0, ["y"] = 1, ["z"] = 0},
+			[2] = {["x"] = 0, ["y"] = -1, ["z"] = 0},
+			[3] = {["x"] = 1, ["y"] = 0, ["z"] = 0},
+			[4] = {["x"] = -1, ["y"] = 0, ["z"] = 0},
+			[5] = {["x"] = 0, ["y"] = 0, ["z"] = 1},
+			[6] = {["x"] = 0, ["y"] = 0, ["z"] = -1},
+		}
+		-- local touching = {}
+		for key, value in pairs(offsets) do
+			local trydist = nil
+			local trywhy = nil
+			local trypos = vector.new(
+				nodepos.x + value.x,
+				nodepos.y + value.y,
+				nodepos.z + value.z
+			)
+			-- touching[key] = trypos
+			local trynode = minetest.get_node(trypos)
+			local tryid = nil
+			local tryname = nil
+			if (trynode) then
+				tryname = trynode.name
+				tryid = minetest.get_content_id(tryname)
+
+				print("tryname:" .. tryname)
+				print("trynode.name:" .. trynode.name)
+				-- if (tryid == minetest.CONTENT_AIR) then
+				if trynode.name == airname then
+					-- found:
+					if (userpos) then
+						trydist = vector.distance(userpos, trypos)
+					else
+						-- dummy value for "found" state:
+						trydist = vector.distance(nodepos, trypos)
+					end
+					trywhy = "air"
+				else
+					-- local trygroup = minetest.get_item_group(trynode.name, "air")
+					-- local drawtype = get_nodedef_field(tryname, "drawtype")
+					if (get_nodedef_field(tryname, "drawtype") == "airlike") then
+						trywhy = "airlike"
+					elseif (get_nodedef_field(tryname, "sunlight_propagates") == true) then
+						trywhy = "sunlight_propagates"
+					else
+						trynode = nil
+						-- print("[metatools::stick] " .. key .. ": "..tryname.." is not airlike, no sunlight_propagates")
+					end
+					if (trynode) then
+						-- found:
+						if (userpos) then
+							trydist = vector.distance(userpos, trypos)
+						else
+							-- dummy value for "found" state:
+							trydist = vector.distance(nodepos, trypos)
+						end
+					end
+					-- if trydef.sunlight_propagates
+				end
+			else
+				trywhy = "non-node"
+				-- (non-node pos should work for the later light check)
+				-- found:
+				if (userpos) then
+					trydist = vector.distance(userpos, trypos)
+				else
+					-- dummy value for "found" state:
+					trydist = vector.distance(nodepos, trypos)
+				end
+			end
+			if (trydist) then
+				if (litpos == nil) or (trydist < litdist) then
+					litdist = trydist
+					litpos = trypos
+					litid = tryid  -- nil if trywhy == "non-node"
+					litwhy = trywhy
+					if (key > 0) then
+						litwhat = "neighbor:"
+						litindent = "  "
+					else
+						foundPointed = true
+						-- is the pointed node
+						break  -- always use pointed node if lightable
+					end
+				end
+			end
+		end
+		local nodelightsource = get_nodedef_field(nodename, "light_source")
+		if (nodelightsource) and (nodelightsource > 0) then
+			if not foundPointed then
+				litmsg = "  # next to pointed light_source=" .. nodelightsource
+			end
+		end
+
+
+		-- litnode = minetest.find_node_near(nodepos, 1, minetest.get_name_from_content_id(minetest.CONTENT_AIR))
+		if (litpos) then
+			if (litwhat) then
+				minetest.chat_send_player(
+					username,
+					"[metatools::stick]   nearby lit:  #"..minetest.pos_to_string(litpos)
+				)
+			end
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick]   "..litindent.."why lit:" .. litwhy .. litmsg
+			)
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick]   "..litindent.."light:" .. minetest.get_node_light(litpos)
+			)
+		else
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick]   nearby lit: ~  # no air/propogator for determining lighting"
+			)
+		end
+		minetest.log("action","[metatools] Player " .. username .. " saw metadatas of node at " .. minetest.pos_to_string(nodepos))
 
 	end,
 })
