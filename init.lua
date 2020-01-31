@@ -206,24 +206,29 @@ minetest.register_craftitem("metatools:stick",{
 		-- 	.. (get_nodedef_field(nodename, "sunlight_propagates") and 'true' or 'false')
 		-- )
 
-
-		minetest.chat_send_player(
-			username,
-			"[metatools::stick]   metadata: "
-			--.. delimit(meta:to_table()["fields"], "", "\n")
-		)
-		send_messages(username, meta:to_table())
-		-- send_messages(username, meta:to_table()["fields"])
-		-- minetest.chat_send_player(
-			-- username,
-			-- "[metatools::stick]   inventory: "
-			-- --.. delimit(meta:to_table()["fields"], "", "\n")
-		-- )
+		local this_meta_to_table = meta:to_table()
+		if #this_meta_to_table > 0 then
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick]   metadata: "
+				--.. delimit(meta:to_table()["fields"], "", "\n")
+			)
+			send_messages(username, this_meta_to_table)
+			-- send_messages(username, meta:to_table()["fields"])
+			-- minetest.chat_send_player(
+				-- username,
+				-- "[metatools::stick]   inventory: "
+				-- --.. delimit(meta:to_table()["fields"], "", "\n")
+			-- )
+		end
 		if meta["get_inventory"] then
 			local inventory = meta:get_inventory()
 			if inventory then  -- this is never true for some reason
-				minetest.chat_send_player(username, "get_inventory():")
-				send_messages(username, inv_to_table(inventory, true))
+				local this_inv_table = inv_to_table(inventory, true)
+				if #this_inv_table > 0 then
+					minetest.chat_send_player(username, "get_inventory():")
+					send_messages(username, this_inv_table)
+				end
 			-- else
 				-- minetest.chat_send_player(username, "\tnil")
 			end
