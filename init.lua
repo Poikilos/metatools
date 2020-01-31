@@ -129,7 +129,7 @@ local function inv_to_table(inv, blank)
 	return results
 end
 
-local function send_messages(username, table, tab)
+local function send_messages(username, table, tab, blank)
 	if not tab then
 		tab = ""
 	end
@@ -138,15 +138,17 @@ local function send_messages(username, table, tab)
 		return
 	end
 	for k, v in pairs(table) do
-		if type(v) == "table" then
-			minetest.chat_send_player(username, tab .. k .. ":")
-			send_messages(username, v, tab.."\t")
-		elseif k == "formspec" then
-			minetest.chat_send_player(username, tab .. k .. ":")
-			local chunks = split_and_keep_token(v, "]")
-			send_messages_sequence(username, chunks, tab.."\t")
-		else
-			minetest.chat_send_player(username, tab..k..":"..dump(v))
+		if blank or ((v ~= nil) and (dump(v) ~= "") and (dump(v) ~= "\"\"")) then
+			if type(v) == "table" then
+				minetest.chat_send_player(username, tab .. k .. ":")
+				send_messages(username, v, tab.."\t")
+			elseif k == "formspec" then
+				minetest.chat_send_player(username, tab .. k .. ":")
+				local chunks = split_and_keep_token(v, "]")
+				send_messages_sequence(username, chunks, tab.."\t")
+			else
+				minetest.chat_send_player(username, tab..k..":"..dump(v))
+			end
 		end
 	end
 end
@@ -210,23 +212,23 @@ minetest.register_craftitem("metatools:stick",{
 			"[metatools::stick]   metadata: "
 			--.. delimit(meta:to_table()["fields"], "", "\n")
 		)
-		-- send_messages(username, meta:to_table()["fields"])
 		send_messages(username, meta:to_table())
-		minetest.chat_send_player(
-			username,
-			"[metatools::stick]   inventory: "
-			--.. delimit(meta:to_table()["fields"], "", "\n")
-		)
+		-- send_messages(username, meta:to_table()["fields"])
+		-- minetest.chat_send_player(
+			-- username,
+			-- "[metatools::stick]   inventory: "
+			-- --.. delimit(meta:to_table()["fields"], "", "\n")
+		-- )
 		if meta["get_inventory"] then
 			local inventory = meta:get_inventory()
-			minetest.chat_send_player(username, "get_inventory():")
 			if inventory then  -- this is never true for some reason
-				send_messages(username, inv_to_table(inventory))
-			else
-				minetest.chat_send_player(username, "\tnil")
+				minetest.chat_send_player(username, "get_inventory():")
+				send_messages(username, inv_to_table(inventory, true))
+			-- else
+				-- minetest.chat_send_player(username, "\tnil")
 			end
-		else
-			minetest.chat_send_player(username, "get_inventory():")
+		-- else
+			-- minetest.chat_send_player(username, "get_inventory:nil")
 		end
 		local airname = minetest.get_name_from_content_id(minetest.CONTENT_AIR)
 		-- local litnode = nil
