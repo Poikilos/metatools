@@ -1,16 +1,155 @@
 --[[
-	--	Metadata Tools
+--  Metadata Tools
 --
---	A mod providing write and read access to a nodes' metadata using commands
---	ßÿ Lymkwi/LeMagnesium/Mg ; 2015-2016
---	License: WTFPL
---	Contributors :
---		- Lymkwi/LeMagnesium
---		- Paly2
+--  A mod providing write and read access to a nodes' metadata using commands
+--  ßÿ Lymkwi/LeMagnesium/Mg ; 2015-2016
+--  License: WTFPL
+--  Contributors :
+--  - Lymkwi/LeMagnesium
+--  - Paly2
+--  - Poikilos
 --
---	Version: 1.2.2
+--  Version: Poikilos fork of 1.2.2
 --
 ]]--
+
+local function token_indices(haystack, needle)
+	local results = {}
+	for i = 1, #haystack do
+		local try = haystack:sub(i,i + needle:len() - 1)
+		if try == needle then
+			table.insert(results, i)
+		end
+	end
+	return results
+end
+
+local function split_and_keep_token(s, needle)
+	local results = {}
+	local indices = token_indices(s, needle)
+	local start = 1
+	for k, v in pairs(indices) do
+		table.insert(results, s:sub(start, v))
+		start = v + 1
+	end
+	if start < #s then
+		table.insert(results, s:sub(start))
+	end
+	return results
+end
+
+local function delimit(table, tab, delimiter)
+	if not tab then
+		tab = ""
+	end
+	if not table then
+		return tab .. "nil"
+	end
+	if not delimiter then
+		delimiter = " "
+	end
+	local ret = ""
+	if delimiter ~= "\n" then
+		ret = tab
+	end
+	for k, v in pairs(table) do
+		if delimiter == "\n" then
+			ret = ret .. tab .. k .. ":" .. v .. "\n"
+		else
+			ret = ret .. k .. ":" .. v .. "\n"
+		end
+	end
+return ret
+end
+
+local function delimit_sequence(table, tab, delimiter)
+	if not tab then
+		tab = ""
+	end
+	if not table then
+		return tab .. "nil"
+	end
+	if not delimiter then
+		delimiter = " "
+	end
+	local ret = ""
+	if delimiter ~= "\n" then
+		ret = tab
+	end
+	for k, v in pairs(table) do
+		if delimiter == "\n" then
+			ret = ret .. tab .. v .. delimiter
+		else
+			ret = ret .. v .. delimiter
+		end
+	end
+	return ret
+end
+
+local function send_messages_sequence(username, table, tab)
+	if not tab then
+		tab = ""
+	end
+	if not table then
+		minetest.chat_send_player(username, tab .. "nil")
+		return
+	end
+	for k, v in pairs(table) do
+		minetest.chat_send_player(username, tab .. v .. ",")
+	end
+
+end
+
+local function inv_to_tables(inv)
+	-- see bones mod
+	results = {}
+	for i = 1, inv:get_size("main") do
+		local stk = inv:get_stack("main", i)
+		table.insert(results, stk:to_table())
+		-- to_table shows everything:
+		--   meta:
+		--   metadata: ""
+		--   count:1
+		--   name:"default:sapling"
+		--   wear:0
+	end
+	return results
+end
+
+local function inv_to_table(inv, blank)
+	-- see bones mod
+	results = {}
+	for i = 1, inv:get_size("main") do
+		local stk = inv:get_stack("main", i)
+		local stk_s = stk:to_string()
+		if #stk_s > 0 or blank then
+			table.insert(results, stk_s)
+		end
+	end
+	return results
+end
+
+local function send_messages(username, table, tab)
+	if not tab then
+		tab = ""
+	end
+	if not table then
+		minetest.chat_send_player(username, tab .. "nil")
+		return
+	end
+	for k, v in pairs(table) do
+		if type(v) == "table" then
+			minetest.chat_send_player(username, tab .. k .. ":")
+			send_messages(username, v, tab.."\t")
+		elseif k == "formspec" then
+			minetest.chat_send_player(username, tab .. k .. ":")
+			local chunks = split_and_keep_token(v, "]")
+			send_messages_sequence(username, chunks, tab.."\t")
+		else
+			minetest.chat_send_player(username, tab..k..":"..dump(v))
+		end
+	end
+end
 
 local function get_nodedef_field(nodename, fieldname)
 	if not minetest.registered_nodes[nodename] then
@@ -41,8 +180,8 @@ minetest.register_craftitem("metatools:stick",{
 		local nodepos  = pointed_thing.under
 		if not nodepos or not minetest.get_node(nodepos) then return end
 		local nodename = minetest.get_node(nodepos).name
-		local node	   = minetest.registered_nodes[nodename]
-		local meta	   = minetest.get_meta(nodepos)
+		local node = minetest.registered_nodes[nodename]
+		local meta = minetest.get_meta(nodepos)
 		local metalist = meta:to_table()
 
 		minetest.chat_send_player(
@@ -69,8 +208,26 @@ minetest.register_craftitem("metatools:stick",{
 		minetest.chat_send_player(
 			username,
 			"[metatools::stick]   metadata: "
-			.. dump(meta:to_table()["fields"]):gsub('\n', "")
+			--.. delimit(meta:to_table()["fields"], "", "\n")
 		)
+		-- send_messages(username, meta:to_table()["fields"])
+		send_messages(username, meta:to_table())
+		minetest.chat_send_player(
+			username,
+			"[metatools::stick]   inventory: "
+			--.. delimit(meta:to_table()["fields"], "", "\n")
+		)
+		if meta["get_inventory"] then
+			local inventory = meta:get_inventory()
+			minetest.chat_send_player(username, "get_inventory():")
+			if inventory then  -- this is never true for some reason
+				send_messages(username, inv_to_table(inventory))
+			else
+				minetest.chat_send_player(username, "\tnil")
+			end
+		else
+			minetest.chat_send_player(username, "get_inventory():")
+		end
 		local airname = minetest.get_name_from_content_id(minetest.CONTENT_AIR)
 		-- local litnode = nil
 		local litpos = nil
@@ -107,8 +264,8 @@ minetest.register_craftitem("metatools:stick",{
 				tryname = trynode.name
 				tryid = minetest.get_content_id(tryname)
 
-				print("tryname:" .. tryname)
-				print("trynode.name:" .. trynode.name)
+				-- print("tryname:" .. tryname)
+				-- print("trynode.name:" .. trynode.name)
 				-- if (tryid == minetest.CONTENT_AIR) then
 				if trynode.name == airname then
 					-- found:
