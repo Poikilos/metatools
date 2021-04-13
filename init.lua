@@ -226,8 +226,18 @@ minetest.register_craftitem("metatools:stick",{
 				local this_inv_table = inv_to_table(inventory, true)
 				if #this_inv_table > 0 then
 					minetest.chat_send_player(username, "get_inventory():")
-					send_messages(username, this_inv_table)
+					send_messages(username, this_inv_table, "  ")
 				end
+			-- else
+				-- minetest.chat_send_player(username, "\tnil")
+			end
+		-- else
+			-- minetest.chat_send_player(username, "get_inventory:nil")
+		end
+		if node.frame_contents then
+			local frame_contents = node.frame_contents
+			if frame_contents then
+				minetest.chat_send_player(username, "frame_contents: "..frame_contents)
 			-- else
 				-- minetest.chat_send_player(username, "\tnil")
 			end
