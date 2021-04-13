@@ -118,7 +118,7 @@ end
 
 local function inv_to_table(inv, blank)
 	-- see bones mod
-	results = {}
+	local results = {}
 	for i = 1, inv:get_size("main") do
 		local stk = inv:get_stack("main", i)
 		local stk_s = stk:to_string()
@@ -206,14 +206,13 @@ minetest.register_craftitem("metatools:stick",{
 		-- 	.. (get_nodedef_field(nodename, "sunlight_propagates") and 'true' or 'false')
 		-- )
 
-		local this_meta_to_table = meta:to_table()
-		if #this_meta_to_table > 0 then
+		if #metalist > 0 then
 			minetest.chat_send_player(
 				username,
 				"[metatools::stick]   metadata: "
 				--.. delimit(meta:to_table()["fields"], "", "\n")
 			)
-			send_messages(username, this_meta_to_table)
+			send_messages(username, metalist)
 			-- send_messages(username, meta:to_table()["fields"])
 			-- minetest.chat_send_player(
 				-- username,
