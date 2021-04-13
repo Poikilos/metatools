@@ -235,9 +235,21 @@ minetest.register_craftitem("metatools:stick",{
 			-- minetest.chat_send_player(username, "get_inventory:nil")
 		end
 		if node.frame_contents then
+			-- frames mod
 			local frame_contents = node.frame_contents
 			if frame_contents then
 				minetest.chat_send_player(username, "frame_contents: "..frame_contents)
+			-- else
+				-- minetest.chat_send_player(username, "\tnil")
+			end
+		-- else
+			-- minetest.chat_send_player(username, "get_inventory:nil")
+		end
+		if meta:get_string("item") ~= "" then
+			-- itemframes mod or xdecor:itemframe
+			local frame_contents = meta:get_string("item")
+			if frame_contents then
+				minetest.chat_send_player(username, "meta item: "..frame_contents)
 			-- else
 				-- minetest.chat_send_player(username, "\tnil")
 			end
