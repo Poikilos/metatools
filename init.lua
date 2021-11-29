@@ -13,6 +13,44 @@
 --
 ]]--
 
+function serializeTable(val, name, skipnewlines, depth)
+    -- Make a table into a string.
+    -- (c) 2011 Henrik Ilgen
+    -- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+    -- answered May 21 '11 at 12:14 Henrik Ilgen
+    -- edited May 13, 2019 at 9:10
+    -- on <https://stackoverflow.com/a/6081639>
+    -- Only the first argument is required.
+    -- Get the object back from the string via:
+    -- a = loadstring(s)()
+    skipnewlines = skipnewlines or false
+    depth = depth or 0
+
+    local tmp = string.rep(" ", depth)
+
+    if name then tmp = tmp .. name .. " = " end
+
+    if type(val) == "table" then
+        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
+
+        for k, v in pairs(val) do
+            tmp =  tmp .. serializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+        end
+
+        tmp = tmp .. string.rep(" ", depth) .. "}"
+    elseif type(val) == "number" then
+        tmp = tmp .. tostring(val)
+    elseif type(val) == "string" then
+        tmp = tmp .. string.format("%q", val)
+    elseif type(val) == "boolean" then
+        tmp = tmp .. (val and "true" or "false")
+    else
+        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+    end
+
+    return tmp
+end
+
 local function token_indices(haystack, needle)
 	local results = {}
 	for i = 1, #haystack do
@@ -176,10 +214,42 @@ dofile(modpath .. "/chatcommands.lua")
 minetest.register_craftitem("metatools:stick",{
 	description = "Meta stick",
 	inventory_image = "metatools_stick.png",
+	stack_max = 1,
 	on_use = function(itemstack, user, pointed_thing)
 		local username = user:get_player_name()
 		local userpos = user:get_pos()
+		if pointed_thing.type == "nothing" then
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick] You pointed at nothing."
+			)
+			return
+		end
+		if pointed_thing.type == "object" then
+			local pointedObjRef = pointed_thing.ref
+			-- local objAsStr = minetest.serialize(pointedObjRef)
+			-- ^ if param is pointed_thing or pointed_thing.ref, minetest.serialize causes "2021-11-14 16:45:39: ERROR[Main]: ServerError: AsyncErr: ServerThread::run Lua: Runtime error from mod 'metatools' in callback item_OnUse(): /home/owner/minetest/bin/../builtin/common/serialize.lua:151: Can't serialize data of type userdata"
+			--   - even serializeTable returns [inserializeable datatype:userdata]
+			-- unrelated note: minetest.serialize(nil) returns "return nil"
+			-- TODO:
+			-- Show ObjectRef armor groups (See <https://git.minetest.org/minetest/minetest/src/branch/master/doc/lua_api.txt#L1825>)
+			-- documentation for ObjectRef: <https://git.minetest.org/minetest/minetest/src/branch/master/doc/lua_api.txt#L1825>
+			local objAsStr = serializeTable(pointedObjRef)
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick] You pointed at an object:"
+			)
+			local pointedObjRef = pointed_thing.ref
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick] " .. objAsStr
+			)
+			minetest.log("action", "[metatools] You pointed at an object: " .. objAsStr)
+		end
 		local nodepos  = pointed_thing.under
+		-- >   * `under` refers to the node position behind the pointed face
+		-- >   * `above` refers to the node position in front of the pointed face.
+		-- -<https://git.minetest.org/minetest/minetest/src/branch/master/doc/lua_api.txt>
 		if not nodepos or not minetest.get_node(nodepos) then return end
 		local nodename = minetest.get_node(nodepos).name
 		local node = minetest.registered_nodes[nodename]
@@ -234,7 +304,8 @@ minetest.register_craftitem("metatools:stick",{
 		-- else
 			-- minetest.chat_send_player(username, "get_inventory:nil")
 		end
-		if node.frame_contents then
+		-- node is nil at this point if the node is an "unknown node"!
+		if node and node.frame_contents then
 			-- frames mod
 			local frame_contents = node.frame_contents
 			if frame_contents then
