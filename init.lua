@@ -236,15 +236,18 @@ minetest.register_craftitem("metatools:stick",{
 			local objAsStr = serializeTable(pointedObjRef)
 			minetest.chat_send_player(
 				username,
-				"[metatools::stick] You pointed at an object:"
+				"[metatools::stick] You pointed at an object (" .. objAsStr .. ")"
 			)
 			local pointedObjRef = pointed_thing.ref
+			-- if pointed_thing.ref.get_hp then
 			minetest.chat_send_player(
 				username,
-				"[metatools::stick] " .. objAsStr
+				"[metatools::stick] pointed_thing.ref:get_hp(): " .. pointedObjRef:get_hp()
 			)
+			-- end
 			-- minetest.log("action", "[metatools] You pointed at an object: " .. objAsStr)
 			local luaEntity = pointedObjRef:get_luaentity()
+			-- INFO: For player name, use user:get_player_name()
 			minetest.chat_send_player(
 				username,
 				"[metatools::stick] LuaEntity name: " .. luaEntity.name
