@@ -224,8 +224,7 @@ minetest.register_craftitem("metatools:stick",{
 				"[metatools::stick] You pointed at nothing."
 			)
 			return
-		end
-		if pointed_thing.type == "object" then
+		elseif pointed_thing.type == "object" then
 			local pointedObjRef = pointed_thing.ref
 			-- local objAsStr = minetest.serialize(pointedObjRef)
 			-- ^ if param is pointed_thing or pointed_thing.ref, minetest.serialize causes "2021-11-14 16:45:39: ERROR[Main]: ServerError: AsyncErr: ServerThread::run Lua: Runtime error from mod 'metatools' in callback item_OnUse(): /home/owner/minetest/bin/../builtin/common/serialize.lua:151: Can't serialize data of type userdata"
@@ -244,7 +243,18 @@ minetest.register_craftitem("metatools:stick",{
 				username,
 				"[metatools::stick] " .. objAsStr
 			)
-			minetest.log("action", "[metatools] You pointed at an object: " .. objAsStr)
+			-- minetest.log("action", "[metatools] You pointed at an object: " .. objAsStr)
+			local luaEntity = pointedObjRef:get_luaentity()
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick] LuaEntity name: " .. luaEntity.name
+			)
+			-- ^ This is the entity name such as namespace:sheep_black where namespace is a mod name.
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick] LuaEntity: " .. serializeTable(luaEntity)
+			)
+		-- else type is usually "node"
 		end
 		local nodepos  = pointed_thing.under
 		-- >   * `under` refers to the node position behind the pointed face
