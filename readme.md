@@ -2,10 +2,8 @@
 
 Get everything possible* about a node just by clicking it with metatools:stick!
 
-This goes far beyond Lymkwi's metatools.
-
-
-## Differences in Poikilos' fork
+## Differences in Poikilos' fork:
+This is a hard fork oriented around getting information without typing any commands.
 - All known* metadata is shown on click! There is no need for various commands to traverse the tree, though the original chat command code is intact.
 - Click a node and get its inventory.
 - Click an entity and list the entire LuaEntitySOA tree!
@@ -31,7 +29,9 @@ stratum.
 
 
 ## Install
-- You can remove the project folder to lighten the "game" if necessary (Keeping the png is useful but only for documentation--Nothing in "projects" is used by the mod code).
+- Copy the repo folder containing init.lua to your Minetest mods folder (The resulting folder should be mods/metatools/).
+- Enable the mod for the world.
+- You can remove the "projects" folder to lighten the "game" if necessary (Keeping the png is useful but only for documentation--Nothing in "projects" is used by the mod code).
 
 
 ## Special thanks
@@ -41,8 +41,13 @@ stratum.
 - palige who agreed to test the mod for its first release, and contributed to the last version
 
 
-## Command tutorial
-- Soon to come, please refer to /meta help until then
+## Use
+- After following the "Install" steps above, open the world in Minetest.
+- Type `/grantme all`
+- Type `/giveme metatools:stick`
+
+The chat commands from https://github.com/Lymkwi/minetest-mod-metatools are still present but usually not necessary:
+- Type `/meta help` to see instructions on chat commands.
 
 
 ## Development
