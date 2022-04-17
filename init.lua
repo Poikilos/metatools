@@ -2,12 +2,8 @@
 --  Metadata Tools
 --
 --  A mod providing write and read access to a nodes' metadata using commands
---  ßÿ Lymkwi/LeMagnesium/Mg ; 2015-2016
---  License: WTFPL
---  Contributors :
---  - Lymkwi/LeMagnesium
---  - Paly2
---  - Poikilos
+--  (c) 2015-2016 ßÿ Lymkwi/LeMagnesium/Mg and Paly2; (c) 2017-2022 Poikilos
+--  License: [CC0](https://creativecommons.org/share-your-work/public-domain/cc0/)
 --
 --  Version: Poikilos fork of 1.2.2
 --
