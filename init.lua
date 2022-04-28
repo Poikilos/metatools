@@ -9,6 +9,71 @@
 --
 ]]--
 
+
+local function isArray(t)
+    -- Check if a table only contains sequential values.
+    -- by kikito
+    -- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+    -- answered May 21, 2011 at 7:22
+    -- edited Mar 2, 2014 at 17:13
+    -- <https://stackoverflow.com/a/6080274/4541104>
+    local i = 0
+    for _ in pairs(t) do
+        i = i + 1
+        if t[i] == nil then return false end
+    end
+    return true
+end
+
+
+function yamlSerializeTable(val, name, depth)
+    -- Make a table into a string.
+    -- (c) 2011 Henrik Ilgen, 2022 Poikilos
+    -- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+    -- answered May 21 '11 at 12:14 Henrik Ilgen
+    -- edited May 13, 2019 at 9:10
+    -- on <https://stackoverflow.com/a/6081639>
+    -- Only the first argument is required.
+    -- Get the object back from the string via:
+    -- a = loadstring(s)()
+    depth = depth or 0
+
+    local tmp = string.rep("  ", depth)
+
+    if name then
+        if name == "METATOOLS_ARRAY_ELEMENT" then
+            tmp = tmp .. "- "
+        else
+            tmp = tmp .. name .. ": "
+        end
+    end
+
+    if type(val) == "table" then
+        if isArray(val) then
+            tmp = tmp .. "\n"
+            for k, v in pairs(val) do
+                tmp =  tmp .. yamlSerializeTable(v, "METATOOLS_ARRAY_ELEMENT", depth + 1) .. "\n"
+            end
+            -- tmp = tmp .. string.rep("  ", depth)
+        else
+            tmp = tmp .. "\n"  -- Newline is after <name>: for tables.
+            for k, v in pairs(val) do
+                tmp =  tmp .. yamlSerializeTable(v, k, depth + 1) .. "\n"
+            end
+            -- tmp = tmp .. string.rep("  ", depth)
+        end
+    elseif type(val) == "number" then
+        tmp = tmp .. tostring(val)
+    elseif type(val) == "string" then
+        tmp = tmp .. string.format("%q", val)
+    elseif type(val) == "boolean" then
+        tmp = tmp .. (val and "true" or "false")
+    else
+        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+    end
+    return tmp
+end
+
 function serializeTable(val, name, skipnewlines, depth)
     -- Make a table into a string.
     -- (c) 2011 Henrik Ilgen
@@ -224,12 +289,12 @@ minetest.register_craftitem("metatools:stick",{
 			local pointedObjRef = pointed_thing.ref
 			-- local objAsStr = minetest.serialize(pointedObjRef)
 			-- ^ if param is pointed_thing or pointed_thing.ref, minetest.serialize causes "2021-11-14 16:45:39: ERROR[Main]: ServerError: AsyncErr: ServerThread::run Lua: Runtime error from mod 'metatools' in callback item_OnUse(): /home/owner/minetest/bin/../builtin/common/serialize.lua:151: Can't serialize data of type userdata"
-			--   - even serializeTable returns [inserializeable datatype:userdata]
+			--   - even yamlSerializeTable returns [inserializeable datatype:userdata]
 			-- unrelated note: minetest.serialize(nil) returns "return nil"
 			-- TODO:
 			-- Show ObjectRef armor groups (See <https://git.minetest.org/minetest/minetest/src/branch/master/doc/lua_api.txt#L1825>)
 			-- documentation for ObjectRef: <https://git.minetest.org/minetest/minetest/src/branch/master/doc/lua_api.txt#L1825>
-			local objAsStr = serializeTable(pointedObjRef)
+			local objAsStr = yamlSerializeTable(pointedObjRef)
 			minetest.chat_send_player(
 				username,
 				"[metatools::stick] You pointed at an object (" .. objAsStr .. ")"
@@ -251,8 +316,25 @@ minetest.register_craftitem("metatools:stick",{
 			-- ^ This is the entity name such as namespace:sheep_black where namespace is a mod name.
 			minetest.chat_send_player(
 				username,
-				"[metatools::stick] LuaEntity: " .. serializeTable(luaEntity)
+				"[metatools::stick] LuaEntity: " .. yamlSerializeTable(luaEntity)
 			)
+			local animation = pointedObjRef:get_animation()
+			minetest.chat_send_player(
+				username,
+				"[metatools::stick] LuaEntity.ref:get_animation():" .. yamlSerializeTable(animation)
+			)
+			-- Hmm, animation.range, animation['range'] are nil
+			-- (same for other variables),
+			-- so API documentation is unclear:
+			-- `get_animation()`: returns `range`, `frame_speed`, `frame_blend` and
+            -- `frame_loop`.
+            -- yamlSerializeTable(animation) only gets:
+            --   y: 65
+            --   x: 35
+			-- minetest.chat_send_player(
+			-- 	username,
+			-- 	yamlSerializeTable(animation.range, "  range")
+			-- )
 		-- else type is usually "node"
 		end
 		local nodepos  = pointed_thing.under
