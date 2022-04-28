@@ -26,6 +26,14 @@ local function isArray(t)
 end
 
 
+-- function string:endswith(ending)
+    -- from https://gist.github.com/kgriffs/124aae3ac80eefe57199451b823c24ec
+--    return ending == "" or self:sub(-#ending) == ending
+--end
+function endswith(str, ending)
+    return ending == "" or str:sub(-#ending) == ending
+end
+
 function yamlSerializeTable(val, name, depth)
 	-- Make a table into a string.
 	-- (c) 2011 Henrik Ilgen, 2022 Poikilos
@@ -46,37 +54,51 @@ function yamlSerializeTable(val, name, depth)
 		else
 			tmp = tmp .. name .. ": "
 		end
+	-- else: should only occur for a value that is after a name already
+	-- given, such as for tables.
 	end
 
 	if type(val) == "table" then
+		tmp = tmp .. "\n"  -- Newline is after <name>: for tables.
+		-- tmp = tmp .. "  # table" .. "\n"  -- for debug only
 		if isArray(val) then
-			tmp = tmp .. "\n"
 			for k, v in pairs(val) do
 				tmp =  tmp .. yamlSerializeTable(v, "METATOOLS_ARRAY_ELEMENT", depth + 1) .. "\n"
 			end
 			-- tmp = tmp .. string.rep("  ", depth)
 		else
-			tmp = tmp .. "\n"  -- Newline is after <name>: for tables.
 			for k, v in pairs(val) do
 				tmp =  tmp .. yamlSerializeTable(v, k, depth + 1) .. "\n"
 			end
 			-- tmp = tmp .. string.rep("  ", depth)
 		end
+		while endswith(tmp, "\n\n") do
+			-- Removing repeated '\n' is necessary since any sub-value
+			-- (and any more deeply nested value) may be a table and
+			-- append "\n" (Then this depth appends "\n").
+			tmp = string.sub(tmp, ( #tmp - 1 ))
+		end
 	elseif type(val) == "number" then
 		tmp = tmp .. tostring(val)
 	elseif type(val) == "string" then
 		tmp = tmp .. string.format("%q", val)
+		-- %q: "surrounds the string with double quotes and properly
+		-- escapes double quotes, newlines, and some other characters
+		-- inside the string."
+		-- -<https://www.lua.org/pil/12.1.html>
 	elseif type(val) == "boolean" then
 		tmp = tmp .. (val and "true" or "false")
+	elseif type(val) == nil then
+		tmp = tmp .. "null"
 	else
 		tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
 	end
 	return tmp
 end
 
-function serializeTable(val, name, skipnewlines, depth)
+function serializeTable(val, name, depth, skipnewlines)
 	-- Make a table into a string.
-	-- (c) 2011 Henrik Ilgen
+	-- (c) 2011 Henrik Ilgen, 2022 Poikilos (switch depth & skipnewlines param order)
 	-- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
 	-- answered May 21 '11 at 12:14 Henrik Ilgen
 	-- edited May 13, 2019 at 9:10
@@ -95,7 +117,7 @@ function serializeTable(val, name, skipnewlines, depth)
 		tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
 
 		for k, v in pairs(val) do
-			tmp =  tmp .. serializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+			tmp =  tmp .. serializeTable(v, k, depth + 1, skipnewlines) .. "," .. (not skipnewlines and "\n" or "")
 		end
 
 		tmp = tmp .. string.rep(" ", depth) .. "}"
@@ -299,11 +321,12 @@ minetest.register_craftitem("metatools:stick",{
 				username,
 				"[metatools::stick] You pointed at an object (" .. objAsStr .. ")"
 			)
+			-- ^ (always?) says "[inserializeable datatype:userdata]", so:
 			local pointedObjRef = pointed_thing.ref
 			-- if pointed_thing.ref.get_hp then
 			minetest.chat_send_player(
 				username,
-				"[metatools::stick] pointed_thing.ref:get_hp(): " .. pointedObjRef:get_hp()
+				"  pointed_thing.ref:get_hp(): " .. pointedObjRef:get_hp()
 			)
 			-- end
 			-- minetest.log("action", "[metatools] You pointed at an object: " .. objAsStr)
@@ -311,18 +334,24 @@ minetest.register_craftitem("metatools:stick",{
 			-- INFO: For player name, use user:get_player_name()
 			minetest.chat_send_player(
 				username,
-				"[metatools::stick] LuaEntity name: " .. luaEntity.name
+				"  LuaEntity.name: " .. luaEntity.name
 			)
 			-- ^ This is the entity name such as namespace:sheep_black where namespace is a mod name.
 			minetest.chat_send_player(
 				username,
-				"[metatools::stick] LuaEntity: " .. yamlSerializeTable(luaEntity)
+				"  LuaEntity: " .. yamlSerializeTable(luaEntity, "", 1)
 			)
 			local animation = pointedObjRef:get_animation()
 			minetest.chat_send_player(
 				username,
-				"[metatools::stick] LuaEntity.ref:get_animation():" .. yamlSerializeTable(animation)
+				"  pointed_thing.ref:get_animation():" .. yamlSerializeTable(animation)
 			)
+			if luaEntity.state then
+				minetest.chat_send_player(
+					username,
+					"  luaEntity.state: " .. yamlSerializeTable(luaEntity.state)
+				)
+			end
 			-- Hmm, animation.range, animation['range'] are nil
 			-- (same for other variables),
 			-- so API documentation is unclear:
