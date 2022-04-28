@@ -11,105 +11,105 @@
 
 
 local function isArray(t)
-    -- Check if a table only contains sequential values.
-    -- by kikito
-    -- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
-    -- answered May 21, 2011 at 7:22
-    -- edited Mar 2, 2014 at 17:13
-    -- <https://stackoverflow.com/a/6080274/4541104>
-    local i = 0
-    for _ in pairs(t) do
-        i = i + 1
-        if t[i] == nil then return false end
-    end
-    return true
+	-- Check if a table only contains sequential values.
+	-- by kikito
+	-- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+	-- answered May 21, 2011 at 7:22
+	-- edited Mar 2, 2014 at 17:13
+	-- <https://stackoverflow.com/a/6080274/4541104>
+	local i = 0
+	for _ in pairs(t) do
+		i = i + 1
+		if t[i] == nil then return false end
+	end
+	return true
 end
 
 
 function yamlSerializeTable(val, name, depth)
-    -- Make a table into a string.
-    -- (c) 2011 Henrik Ilgen, 2022 Poikilos
-    -- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
-    -- answered May 21 '11 at 12:14 Henrik Ilgen
-    -- edited May 13, 2019 at 9:10
-    -- on <https://stackoverflow.com/a/6081639>
-    -- Only the first argument is required.
-    -- Get the object back from the string via:
-    -- a = loadstring(s)()
-    depth = depth or 0
+	-- Make a table into a string.
+	-- (c) 2011 Henrik Ilgen, 2022 Poikilos
+	-- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+	-- answered May 21 '11 at 12:14 Henrik Ilgen
+	-- edited May 13, 2019 at 9:10
+	-- on <https://stackoverflow.com/a/6081639>
+	-- Only the first argument is required.
+	-- Get the object back from the string via:
+	-- a = loadstring(s)()
+	depth = depth or 0
 
-    local tmp = string.rep("  ", depth)
+	local tmp = string.rep("  ", depth)
 
-    if name then
-        if name == "METATOOLS_ARRAY_ELEMENT" then
-            tmp = tmp .. "- "
-        else
-            tmp = tmp .. name .. ": "
-        end
-    end
+	if name then
+		if name == "METATOOLS_ARRAY_ELEMENT" then
+			tmp = tmp .. "- "
+		else
+			tmp = tmp .. name .. ": "
+		end
+	end
 
-    if type(val) == "table" then
-        if isArray(val) then
-            tmp = tmp .. "\n"
-            for k, v in pairs(val) do
-                tmp =  tmp .. yamlSerializeTable(v, "METATOOLS_ARRAY_ELEMENT", depth + 1) .. "\n"
-            end
-            -- tmp = tmp .. string.rep("  ", depth)
-        else
-            tmp = tmp .. "\n"  -- Newline is after <name>: for tables.
-            for k, v in pairs(val) do
-                tmp =  tmp .. yamlSerializeTable(v, k, depth + 1) .. "\n"
-            end
-            -- tmp = tmp .. string.rep("  ", depth)
-        end
-    elseif type(val) == "number" then
-        tmp = tmp .. tostring(val)
-    elseif type(val) == "string" then
-        tmp = tmp .. string.format("%q", val)
-    elseif type(val) == "boolean" then
-        tmp = tmp .. (val and "true" or "false")
-    else
-        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
-    end
-    return tmp
+	if type(val) == "table" then
+		if isArray(val) then
+			tmp = tmp .. "\n"
+			for k, v in pairs(val) do
+				tmp =  tmp .. yamlSerializeTable(v, "METATOOLS_ARRAY_ELEMENT", depth + 1) .. "\n"
+			end
+			-- tmp = tmp .. string.rep("  ", depth)
+		else
+			tmp = tmp .. "\n"  -- Newline is after <name>: for tables.
+			for k, v in pairs(val) do
+				tmp =  tmp .. yamlSerializeTable(v, k, depth + 1) .. "\n"
+			end
+			-- tmp = tmp .. string.rep("  ", depth)
+		end
+	elseif type(val) == "number" then
+		tmp = tmp .. tostring(val)
+	elseif type(val) == "string" then
+		tmp = tmp .. string.format("%q", val)
+	elseif type(val) == "boolean" then
+		tmp = tmp .. (val and "true" or "false")
+	else
+		tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+	end
+	return tmp
 end
 
 function serializeTable(val, name, skipnewlines, depth)
-    -- Make a table into a string.
-    -- (c) 2011 Henrik Ilgen
-    -- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
-    -- answered May 21 '11 at 12:14 Henrik Ilgen
-    -- edited May 13, 2019 at 9:10
-    -- on <https://stackoverflow.com/a/6081639>
-    -- Only the first argument is required.
-    -- Get the object back from the string via:
-    -- a = loadstring(s)()
-    skipnewlines = skipnewlines or false
-    depth = depth or 0
+	-- Make a table into a string.
+	-- (c) 2011 Henrik Ilgen
+	-- [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/)
+	-- answered May 21 '11 at 12:14 Henrik Ilgen
+	-- edited May 13, 2019 at 9:10
+	-- on <https://stackoverflow.com/a/6081639>
+	-- Only the first argument is required.
+	-- Get the object back from the string via:
+	-- a = loadstring(s)()
+	skipnewlines = skipnewlines or false
+	depth = depth or 0
 
-    local tmp = string.rep(" ", depth)
+	local tmp = string.rep(" ", depth)
 
-    if name then tmp = tmp .. name .. " = " end
+	if name then tmp = tmp .. name .. " = " end
 
-    if type(val) == "table" then
-        tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
+	if type(val) == "table" then
+		tmp = tmp .. "{" .. (not skipnewlines and "\n" or "")
 
-        for k, v in pairs(val) do
-            tmp =  tmp .. serializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
-        end
+		for k, v in pairs(val) do
+			tmp =  tmp .. serializeTable(v, k, skipnewlines, depth + 1) .. "," .. (not skipnewlines and "\n" or "")
+		end
 
-        tmp = tmp .. string.rep(" ", depth) .. "}"
-    elseif type(val) == "number" then
-        tmp = tmp .. tostring(val)
-    elseif type(val) == "string" then
-        tmp = tmp .. string.format("%q", val)
-    elseif type(val) == "boolean" then
-        tmp = tmp .. (val and "true" or "false")
-    else
-        tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
-    end
+		tmp = tmp .. string.rep(" ", depth) .. "}"
+	elseif type(val) == "number" then
+		tmp = tmp .. tostring(val)
+	elseif type(val) == "string" then
+		tmp = tmp .. string.format("%q", val)
+	elseif type(val) == "boolean" then
+		tmp = tmp .. (val and "true" or "false")
+	else
+		tmp = tmp .. "\"[inserializeable datatype:" .. type(val) .. "]\""
+	end
 
-    return tmp
+	return tmp
 end
 
 local function token_indices(haystack, needle)
@@ -327,10 +327,10 @@ minetest.register_craftitem("metatools:stick",{
 			-- (same for other variables),
 			-- so API documentation is unclear:
 			-- `get_animation()`: returns `range`, `frame_speed`, `frame_blend` and
-            -- `frame_loop`.
-            -- yamlSerializeTable(animation) only gets:
-            --   y: 65
-            --   x: 35
+			-- `frame_loop`.
+			-- yamlSerializeTable(animation) only gets:
+			--   y: 65
+			--   x: 35
 			-- minetest.chat_send_player(
 			-- 	username,
 			-- 	yamlSerializeTable(animation.range, "  range")
