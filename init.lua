@@ -2,7 +2,7 @@
 --  Metadata Tools
 --
 --  A mod providing write and read access to a nodes' metadata using commands
---  (c) 2015-2016 ßÿ Lymkwi/LeMagnesium/Mg and Paly2; (c) 2017-2022 Poikilos
+--  (c) 2015-2016 ßÿ Lymkwi/LeMagnesium/Mg and Paly2; & (c) 2017-2024 Poikilos
 --  License: [CC0](https://creativecommons.org/share-your-work/public-domain/cc0/)
 --
 --  Version: Poikilos fork of 1.2.2
@@ -307,7 +307,10 @@ minetest.register_craftitem("metatools:stick",{
 				"[metatools::stick] You pointed at nothing."
 			)
 			return
-		elseif pointed_thing.type == "object" then
+		elseif pointed_thing.type == "object" and pointed_thing.ref and pointed_thing.ref:get_luaentity() then
+      -- It must be a mob
+      --   (Otherwise [if not get_luaentity(),] it must be a player character,
+      --   so see next elseif case
 			local pointedObjRef = pointed_thing.ref
 			-- local objAsStr = minetest.serialize(pointedObjRef)
 			-- ^ if param is pointed_thing or pointed_thing.ref, minetest.serialize causes "2021-11-14 16:45:39: ERROR[Main]: ServerError: AsyncErr: ServerThread::run Lua: Runtime error from mod 'metatools' in callback item_OnUse(): /home/owner/minetest/bin/../builtin/common/serialize.lua:151: Can't serialize data of type userdata"
@@ -331,7 +334,8 @@ minetest.register_craftitem("metatools:stick",{
 			-- end
 			-- minetest.log("action", "[metatools] You pointed at an object: " .. objAsStr)
 			local luaEntity = pointedObjRef:get_luaentity()
-			-- INFO: For player name, use user:get_player_name()
+			-- NOTE: For player name, use user:get_player_name()
+      -- NOTE: luaEntity is nil when clicking player!
 			minetest.chat_send_player(
 				username,
 				"  LuaEntity.name: " .. luaEntity.name
@@ -364,8 +368,119 @@ minetest.register_craftitem("metatools:stick",{
 			-- 	username,
 			-- 	yamlSerializeTable(animation.range, "  range")
 			-- )
-		-- else type is usually "node"
+		-- else will return early (See "if not nodepos or ..." below)!
+    elseif pointed_thing.type == "object" and pointed_thing.ref and pointed_thing.ref:is_player() then
+      -- NOTE pointed_thing.ref.get_luaentity() is nil in this and all successive cases
+      -- local pointedObjRef = pointed_thing.ref
+      local player = pointed_thing.ref
+      local inv = player:get_inventory()
+      if pointed_thing.ref:get_player_name() then
+        minetest.chat_send_player(
+          username,
+          "  player name: " .. pointed_thing.ref:get_player_name()
+        )
+      else
+        minetest.chat_send_player(
+          username,
+          "  player name: nil"
+        )
+      end
+      if pointed_thing.ref:get_entity_name() then
+        minetest.chat_send_player(
+          username,
+          "  entity name: " .. pointed_thing.ref:get_entity_name()
+        )
+      end
+      minetest.chat_send_player(
+        username,
+				"  inventories:"
+      )
+      -- local pointedEntitySAO = player:getluaobject()
+      -- local pointedPlayerSAO = player:getplayersao()
+      -- local pointedRemotePlayer = player:getplayer()
+      local inventories = {
+        ["main"] = 32,
+        ["hand"] = 1,
+        ["craft"] = 1,
+        ["craftpreview"] = 1,
+        ["craftresult"] = 1,
+        ["bag1"] = 1,
+        ["bag1contents"] = 32,
+        ["bag2"] = 1,
+        ["bag2contents"] = 32,
+        ["bag3"] = 1,
+        ["bag3contents"] = 32,
+        ["bag4"] = 1,
+        ["bag4contents"] = 32,
+        ["more_chests:wifi"] = 32,
+        ["enderchest"] = 32
+      }
+      -- NOTE: "hunger" is also an inventory but it is used as a savable variable
+      for inv_name, inv_max in pairs(inventories) do
+        local i = 0
+        local inv_count = 0
+        local inv_block_text = ""
+        for y=1,4,1 do
+          local sep = ""
+          local line = ""
+          for x=1,8,1 do
+            i = i + 1  -- 1 to 32
+            if i > inv_max then
+              break
+            end
+            line = line .. sep .. inv:get_stack(inv_name, i):get_name()
+            if inv:get_stack(inv_name, i):get_count() > 1 then
+              line = line .. " " .. inv:get_stack(inv_name, i):get_count()
+              inv_count = inv_count + 1
+            end
+            sep = ", "
+          end
+          if i > inv_max then
+            break
+          end
+          inv_block_text = inv_block_text .. "    - " .. line .. "\n"
+        end
+        if inv_count > 0 then
+          minetest.chat_send_player(
+            username,
+            "    " .. inv_name .." inventory:\n" .. inv_block_text
+          )        
+        end
+      end
+      -- Next get player metadata "3d_armor_inventory" (contains a Lua return statement returning the 3d_armor table for the player)
+      local known_metas = {"3d_armor_inventory", "unified_inventory:bags", "sethome:home"}
+      for _, meta_name in pairs(known_metas) do
+          
+        local attribute_meta = player:get_meta()  -- see also 3d_armor init.lua
+        -- Other attributes: local known_metas = {"hbsprint:sprinting", "hbsprint:stamina", "homedecor:player_skin", "hunger_ng:eating_timestamp", "hunger_ng:hunger", "hunger_ng:hunger_bar", "skinsdb:skin_key", "sprinting", "stamina"}
+        local content_lua = attribute_meta:get_string(meta_name)
+        if content_lua then
+          minetest.chat_send_player(
+            username,
+            "  " .. meta_name .. " = " .. content_lua
+          )
+        end
+      end
+    elseif pointed_thing.type == "object" and pointed_thing.ref then
+      -- NOTE pointed_thing.ref.get_luaentity() is nil in this and all successive cases
+      -- local pointedObjRef = pointed_thing.ref
+			minetest.chat_send_player(
+				username,
+				"A non-player non-Lua ObjRef was clicked (NotImplemented in this version of metatools):"
+			)
+      if pointed_thing.ref:get_entity_name() then
+        minetest.chat_send_player(
+          username,
+          "  entity name: " .. pointed_thing.ref:get_entity_name()
+        )
+      else
+        minetest.chat_send_player(
+          username,
+          "  entity name: nil"
+        )
+      end
 		end
+    
 		local nodepos  = pointed_thing.under
 		-- >   * `under` refers to the node position behind the pointed face
 		-- >   * `above` refers to the node position in front of the pointed face.
