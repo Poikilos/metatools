@@ -399,21 +399,21 @@ minetest.register_craftitem("metatools:stick",{
       -- local pointedPlayerSAO = player:getplayersao()
       -- local pointedRemotePlayer = player:getplayer()
       local inventories = {
-        ["main"] = 32,
-        ["hand"] = 1,
-        ["craft"] = 1,
-        ["craftpreview"] = 1,
-        ["craftresult"] = 1,
-        ["bag1"] = 1,
-        ["bag1contents"] = 32,
+        ["main"] = 32,  -- The regular inventory grid
+        ["hand"] = 1,  -- item shown in hand in 3D (?)
+        ["craft"] = 9,  -- the 3x3 area for crafting
+        ["craftpreview"] = 1,  -- you can see but not take from preview
+        ["craftresult"] = 1,  -- you take the item from this to craft it
+        ["bag1"] = 1, -- For bag itself (bag item placed here enables bag1contents)
+        ["bag1contents"] = 32, -- The items in the bag
         ["bag2"] = 1,
         ["bag2contents"] = 32,
         ["bag3"] = 1,
         ["bag3contents"] = 32,
         ["bag4"] = 1,
         ["bag4contents"] = 32,
-        ["more_chests:wifi"] = 32,
-        ["enderchest"] = 32
+        ["more_chests:wifi"] = 32,  -- on player since all chests are shared
+        ["enderchest"] = 32  -- legacy, TM Mojang. See wifi instead.
       }
       -- NOTE: "hunger" is also an inventory but it is used as a savable variable
       for inv_name, inv_max in pairs(inventories) do
@@ -423,23 +423,27 @@ minetest.register_craftitem("metatools:stick",{
         for y=1,4,1 do
           local sep = ""
           local line = ""
-          for x=1,8,1 do
+          local cols = 8
+          if inv_max == 9 then
+            cols = 3
+          end
+          for x=1,cols,1 do
             i = i + 1  -- 1 to 32
             if i > inv_max then
               break
             end
             line = line .. sep .. inv:get_stack(inv_name, i):get_name()
-            if inv:get_stack(inv_name, i):get_count() > 1 then
+            if inv:get_stack(inv_name, i):get_count() > 0 then
               line = line .. " " .. inv:get_stack(inv_name, i):get_count()
               inv_count = inv_count + 1
             end
             sep = ", "
-          end
+          end  -- end for column
           if i > inv_max then
             break
           end
           inv_block_text = inv_block_text .. "    - " .. line .. "\n"
-        end
+        end  -- end for row (newline)
         if inv_count > 0 then
           minetest.chat_send_player(
             username,
@@ -450,11 +454,10 @@ minetest.register_craftitem("metatools:stick",{
       -- Next get player metadata "3d_armor_inventory" (contains a Lua return statement returning the 3d_armor table for the player)
       local known_metas = {"3d_armor_inventory", "unified_inventory:bags", "sethome:home"}
       for _, meta_name in pairs(known_metas) do
-          
         local attribute_meta = player:get_meta()  -- see also 3d_armor init.lua
         -- Other attributes: local known_metas = {"hbsprint:sprinting", "hbsprint:stamina", "homedecor:player_skin", "hunger_ng:eating_timestamp", "hunger_ng:hunger", "hunger_ng:hunger_bar", "skinsdb:skin_key", "sprinting", "stamina"}
         local content_lua = attribute_meta:get_string(meta_name)
-        if content_lua then
+        if content_lua and content_lua ~= "" then
           minetest.chat_send_player(
             username,
             "  " .. meta_name .. " = " .. content_lua
